@@ -301,3 +301,37 @@ fn v2_store_definition_reaches_memory_load() {
                 && edge.kind == DfgEdgeKind::Filled));
     }
 }
+
+#[test]
+// SIMD-0174
+fn non_v2_alu_opcodes() {
+    for (version, expected) in [
+        (SBPFVersion::V0, true),
+        (SBPFVersion::V1, true),
+        (SBPFVersion::V2, false),
+        (SBPFVersion::V3, true),
+        (SBPFVersion::V4, true),
+    ] {
+        for opcode in [
+            // Non V2 MUL operations
+            ebpf::MUL32_IMM,
+            ebpf::MUL32_REG,
+            ebpf::MUL64_IMM,
+            ebpf::MUL64_REG,
+            // Non V2 DIV operations
+            ebpf::DIV32_IMM,
+            ebpf::DIV32_REG,
+            ebpf::DIV64_IMM,
+            ebpf::DIV64_REG,
+            // Non V2 MOD operations
+            ebpf::MOD32_IMM,
+            ebpf::MOD32_REG,
+            ebpf::MOD64_IMM,
+            ebpf::MOD64_REG,
+        ] {
+            let exe = executable(&[insn(opcode, 2, 1, 0, 42)], version);
+            let analysis = Analysis::from_executable(&exe).unwrap();
+            assert_eq!(entry_read(&analysis, 0, 1), expected, "SBPF {version:?}");
+        }
+    }
+}
