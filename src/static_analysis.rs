@@ -1128,16 +1128,22 @@ impl<'a> Analysis<'a> {
                         ebpf::LD_DW_IMM => {
                             bind(&mut state, insn, true, DataResource::Register(insn.dst));
                         }
-                        ebpf::LD_B_REG | ebpf::LD_H_REG | ebpf::LD_W_REG | ebpf::LD_DW_REG => {
+                        ebpf::LD_B_REG | ebpf::LD_H_REG | ebpf::LD_W_REG | ebpf::LD_DW_REG
+                            if !sbpf_version.move_memory_instruction_classes() =>
+                        {
                             bind(&mut state, insn, false, DataResource::Memory);
                             bind(&mut state, insn, false, DataResource::Register(insn.src));
                             bind(&mut state, insn, true, DataResource::Register(insn.dst));
                         }
-                        ebpf::ST_B_IMM | ebpf::ST_H_IMM | ebpf::ST_W_IMM | ebpf::ST_DW_IMM => {
+                        ebpf::ST_B_IMM | ebpf::ST_H_IMM | ebpf::ST_W_IMM | ebpf::ST_DW_IMM
+                            if !sbpf_version.move_memory_instruction_classes() =>
+                        {
                             bind(&mut state, insn, false, DataResource::Register(insn.dst));
                             bind(&mut state, insn, true, DataResource::Memory);
                         }
-                        ebpf::ST_B_REG | ebpf::ST_H_REG | ebpf::ST_W_REG | ebpf::ST_DW_REG => {
+                        ebpf::ST_B_REG | ebpf::ST_H_REG | ebpf::ST_W_REG | ebpf::ST_DW_REG
+                            if !sbpf_version.move_memory_instruction_classes() =>
+                        {
                             bind(&mut state, insn, false, DataResource::Register(insn.src));
                             bind(&mut state, insn, false, DataResource::Register(insn.dst));
                             bind(&mut state, insn, true, DataResource::Memory);
