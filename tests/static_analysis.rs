@@ -301,3 +301,37 @@ fn v2_store_definition_reaches_memory_load() {
                 && edge.kind == DfgEdgeKind::Filled));
     }
 }
+
+#[test]
+fn v2_memory_class_opcs_guarded_dfg() {
+    for (version, expected) in [
+        (SBPFVersion::V0, true),
+        (SBPFVersion::V1, true),
+        (SBPFVersion::V2, false),
+        (SBPFVersion::V3, true),
+        (SBPFVersion::V4, true),
+    ] {
+        for (store_imm, store_reg, load) in [
+            (ebpf::ST_B_IMM, ebpf::ST_B_REG, ebpf::LD_B_REG),
+            (ebpf::ST_H_IMM, ebpf::ST_H_REG, ebpf::LD_H_REG),
+            (ebpf::ST_W_IMM, ebpf::ST_W_REG, ebpf::LD_W_REG),
+            (ebpf::ST_DW_IMM, ebpf::ST_DW_REG, ebpf::LD_DW_REG),
+        ] {
+            let code = &[
+                insn(store_imm, 1, 0, 2, 42),
+                insn(store_reg, 1, 2, 3, 43),
+                insn(load, 1, 2, 3, 0),
+            ];
+            let exe = executable(code, version);
+            let analysis = Analysis::from_executable(&exe).unwrap();
+            assert!(
+                code.iter().enumerate().all(|(pc, _)| analysis
+                    .dfg_reverse_edges
+                    .contains_key(&DfgNode::InstructionNode(pc))
+                    == expected),
+                "SBPF: {:?}",
+                version
+            )
+        }
+    }
+}
