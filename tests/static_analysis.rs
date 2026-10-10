@@ -303,7 +303,7 @@ fn v2_store_definition_reaches_memory_load() {
 }
 
 #[test]
-fn v2_memory_class_opcs_guarded_dfg() {
+fn v2_memory_class_guarded_dfg() {
     for (version, expected) in [
         (SBPFVersion::V0, true),
         (SBPFVersion::V1, true),
@@ -332,6 +332,52 @@ fn v2_memory_class_opcs_guarded_dfg() {
                 "SBPF: {:?}",
                 version
             )
+        }
+    }
+}
+
+#[test]
+fn v2_moved_alu_opcodes_dfg() {
+    for (version, expected_alu) in [
+        (SBPFVersion::V0, true),
+        (SBPFVersion::V1, true),
+        (SBPFVersion::V2, false),
+        (SBPFVersion::V3, true),
+        (SBPFVersion::V4, true),
+    ] {
+        for (mul, div, mod_) in [
+            (ebpf::MUL32_IMM, ebpf::DIV32_IMM, ebpf::MOD32_IMM),
+            (ebpf::MUL64_IMM, ebpf::DIV64_IMM, ebpf::MOD64_IMM),
+            (ebpf::MUL32_REG, ebpf::DIV32_REG, ebpf::MOD32_REG),
+            (ebpf::MUL64_REG, ebpf::DIV64_REG, ebpf::MOD64_REG),
+        ] {
+            let code = &[
+                insn(mul, 0, 1, 0, 42),
+                insn(div, 2, 3, 0, 43),
+                insn(mod_, 4, 5, 0, 44),
+            ];
+            let exe = executable(code, version);
+            let analysis = Analysis::from_executable(&exe).unwrap();
+
+            let has_mem_dep = |pc| {
+                analysis
+                    .dfg_reverse_edges
+                    .get(&DfgNode::InstructionNode(pc))
+                    .is_some_and(|edges| edges.iter().any(|e| e.resource == DataResource::Memory))
+            };
+
+            // According to SIMD-0173, ALU opcodes of MUL, DIV and MOD get replaced with memory instructions
+            let bad = code
+                .iter()
+                .enumerate()
+                .find(|&(pc, _)| expected_alu && has_mem_dep(pc));
+
+            if let Some((pc, insn)) = bad {
+                panic!(
+                    "SBPF: {version:?}, unexpected memory dependency at pc {pc}, opc: {:#x}",
+                    insn[0]
+                )
+            }
         }
     }
 }

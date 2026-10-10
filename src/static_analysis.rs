@@ -1150,24 +1150,18 @@ impl<'a> Analysis<'a> {
                         }
                         ebpf::ADD32_IMM
                         | ebpf::SUB32_IMM
-                        | ebpf::MUL32_IMM
-                        | ebpf::DIV32_IMM
                         | ebpf::OR32_IMM
                         | ebpf::AND32_IMM
                         | ebpf::LSH32_IMM
                         | ebpf::RSH32_IMM
-                        | ebpf::MOD32_IMM
                         | ebpf::XOR32_IMM
                         | ebpf::ARSH32_IMM
                         | ebpf::ADD64_IMM
                         | ebpf::SUB64_IMM
-                        | ebpf::MUL64_IMM
-                        | ebpf::DIV64_IMM
                         | ebpf::OR64_IMM
                         | ebpf::AND64_IMM
                         | ebpf::LSH64_IMM
                         | ebpf::RSH64_IMM
-                        | ebpf::MOD64_IMM
                         | ebpf::XOR64_IMM
                         | ebpf::ARSH64_IMM
                         | ebpf::HOR64_IMM
@@ -1178,31 +1172,48 @@ impl<'a> Analysis<'a> {
                             bind(&mut state, insn, false, DataResource::Register(insn.dst));
                             bind(&mut state, insn, true, DataResource::Register(insn.dst));
                         }
+                        ebpf::MUL32_IMM
+                        | ebpf::DIV32_IMM
+                        | ebpf::MOD32_IMM
+                        | ebpf::MUL64_IMM
+                        | ebpf::DIV64_IMM
+                        | ebpf::MOD64_IMM
+                            if !sbpf_version.enable_pqr() =>
+                        {
+                            bind(&mut state, insn, false, DataResource::Register(insn.dst));
+                            bind(&mut state, insn, true, DataResource::Register(insn.dst));
+                        }
                         ebpf::MOV32_IMM | ebpf::MOV64_IMM => {
                             bind(&mut state, insn, true, DataResource::Register(insn.dst));
                         }
                         ebpf::ADD32_REG
                         | ebpf::SUB32_REG
-                        | ebpf::MUL32_REG
-                        | ebpf::DIV32_REG
                         | ebpf::OR32_REG
                         | ebpf::AND32_REG
                         | ebpf::LSH32_REG
                         | ebpf::RSH32_REG
-                        | ebpf::MOD32_REG
                         | ebpf::XOR32_REG
                         | ebpf::ARSH32_REG
                         | ebpf::ADD64_REG
                         | ebpf::SUB64_REG
-                        | ebpf::MUL64_REG
-                        | ebpf::DIV64_REG
                         | ebpf::OR64_REG
                         | ebpf::AND64_REG
                         | ebpf::LSH64_REG
                         | ebpf::RSH64_REG
-                        | ebpf::MOD64_REG
                         | ebpf::XOR64_REG
                         | ebpf::ARSH64_REG => {
+                            bind(&mut state, insn, false, DataResource::Register(insn.src));
+                            bind(&mut state, insn, false, DataResource::Register(insn.dst));
+                            bind(&mut state, insn, true, DataResource::Register(insn.dst));
+                        }
+                        ebpf::MUL32_REG
+                        | ebpf::DIV32_REG
+                        | ebpf::MOD32_REG
+                        | ebpf::MUL64_REG
+                        | ebpf::DIV64_REG
+                        | ebpf::MOD64_REG
+                            if !sbpf_version.enable_pqr() =>
+                        {
                             bind(&mut state, insn, false, DataResource::Register(insn.src));
                             bind(&mut state, insn, false, DataResource::Register(insn.dst));
                             bind(&mut state, insn, true, DataResource::Register(insn.dst));
