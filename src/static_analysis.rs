@@ -1125,7 +1125,7 @@ impl<'a> Analysis<'a> {
                                 bind(&mut state, insn, false, DataResource::Register(reg as u8));
                             }
                         }
-                        ebpf::LD_DW_IMM => {
+                        ebpf::LD_DW_IMM if !sbpf_version.disable_lddw() => {
                             bind(&mut state, insn, true, DataResource::Register(insn.dst));
                         }
                         ebpf::LD_B_REG | ebpf::LD_H_REG | ebpf::LD_W_REG | ebpf::LD_DW_REG
@@ -1164,11 +1164,14 @@ impl<'a> Analysis<'a> {
                         | ebpf::RSH64_IMM
                         | ebpf::XOR64_IMM
                         | ebpf::ARSH64_IMM
-                        | ebpf::HOR64_IMM
                         | ebpf::NEG32
                         | ebpf::NEG64
                         | ebpf::LE
                         | ebpf::BE => {
+                            bind(&mut state, insn, false, DataResource::Register(insn.dst));
+                            bind(&mut state, insn, true, DataResource::Register(insn.dst));
+                        }
+                        ebpf::HOR64_IMM if sbpf_version.disable_lddw() => {
                             bind(&mut state, insn, false, DataResource::Register(insn.dst));
                             bind(&mut state, insn, true, DataResource::Register(insn.dst));
                         }

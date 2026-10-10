@@ -381,3 +381,38 @@ fn v2_moved_alu_opcodes_dfg() {
         }
     }
 }
+
+#[test]
+fn v2_lddw_replaced_with_hor() {
+    for (version, lddw_expected) in [
+        (SBPFVersion::V0, true),
+        (SBPFVersion::V1, true),
+        (SBPFVersion::V2, false),
+        (SBPFVersion::V3, true),
+        (SBPFVersion::V4, true),
+    ] {
+        let exe = executable(
+            &[
+                insn(ebpf::LD_DW_IMM, 1, 0, 0, 0x5566_7788),
+                insn(0x00, 0, 0, 0, 0x1122_3344),
+                insn(ebpf::HOR64_IMM, 1, 0, 0, 0x1122_3344),
+            ],
+            version,
+        );
+        let analysis = Analysis::from_executable(&exe).unwrap();
+
+        let lddw_parsed = analysis
+            .dfg_reverse_edges
+            .contains_key(&DfgNode::InstructionNode(0));
+
+        let hor_parsed = analysis
+            .dfg_reverse_edges
+            .contains_key(&DfgNode::InstructionNode(2));
+
+        assert!(
+            lddw_parsed == lddw_expected && hor_parsed == !lddw_expected,
+            "SBPF: {:?}",
+            version
+        );
+    }
+}
